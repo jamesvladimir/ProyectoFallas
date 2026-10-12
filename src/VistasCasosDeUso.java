@@ -28,14 +28,21 @@ public class VistasCasosDeUso {
         return topBar;
     }
 
-    public static Scene getReportarFalla(Stage stage) {
-        VBox layout = new VBox(20);
+ public static Scene getReportarFalla(Stage stage) {
+        VBox layout = new VBox(15);
         layout.setPadding(new Insets(30));
         layout.setStyle(Estilos.FONDO_PRINCIPAL);
 
         TextField txtSerie = new TextField();
-        txtSerie.setPromptText("Escanear Código QR o Serie");
+        txtSerie.setPromptText("Número de Serie");
         txtSerie.setStyle(Estilos.INPUT_BEIGE);
+
+        // ComboBox para seleccionar el tipo de falla cargado desde la BD
+        ComboBox<TipoFalla> cbTipoFalla = new ComboBox<>();
+        cbTipoFalla.setPromptText("Seleccionar Tipo de Falla");
+        cbTipoFalla.setStyle(Estilos.INPUT_BEIGE);
+        cbTipoFalla.setPrefWidth(Double.MAX_VALUE);
+        cbTipoFalla.getItems().addAll(ConexionDB.obtenerTiposFalla());
 
         TextArea txtDesc = new TextArea();
         txtDesc.setPromptText("Descripción de la falla...");
@@ -48,11 +55,12 @@ public class VistasCasosDeUso {
         
         btnEnviar.setOnAction(e -> {
             String serie = txtSerie.getText().trim();
+            TipoFalla tipoSeleccionado = cbTipoFalla.getValue();
             String desc = txtDesc.getText().trim();
 
-            // 1. Validar campos vacíos
-            if (serie.isEmpty() || desc.isEmpty()) {
-                mostrarAlerta(Alert.AlertType.WARNING, "Campos vacíos", "Debes ingresar el número de serie y la descripción de la falla.");
+            // 1. Validar campos vacíos incluyendo el ComboBox
+            if (serie.isEmpty() || tipoSeleccionado == null || desc.isEmpty()) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Campos incompletos", "Debes ingresar la serie, seleccionar el tipo de falla y escribir una descripción.");
                 return;
             }
 
@@ -62,17 +70,18 @@ public class VistasCasosDeUso {
                 return;
             }
 
-            // 3. Insertar la falla
-            if (ConexionDB.registrarFalla(serie, desc)) {
+            // 3. Insertar la falla enviando el ID del tipo seleccionado
+            if (ConexionDB.registrarFalla(serie, tipoSeleccionado.getId(), desc)) {
                 mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "El reporte se ha guardado correctamente.");
                 txtSerie.clear();
+                cbTipoFalla.setValue(null);
                 txtDesc.clear();
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Error", "Ocurrió un problema al guardar en la base de datos.");
             }
         });
 
-        layout.getChildren().addAll(crearTopBar(stage, "Reportar Falla"), txtSerie, txtDesc, btnEnviar);
+        layout.getChildren().addAll(crearTopBar(stage, "Reportar Falla"), txtSerie, cbTipoFalla, txtDesc, btnEnviar);
         return new Scene(layout, 380, 650);
     }
 
@@ -89,6 +98,15 @@ public class VistasCasosDeUso {
         txtNombre.setPromptText("Nombre del Equipo");
         txtNombre.setStyle(Estilos.INPUT_BEIGE);
 
+        // ComboBox para desplegar los tipos de maquinaria de la BD
+        ComboBox<TipoMaquinaria> cbTipoMaquinaria = new ComboBox<>();
+        cbTipoMaquinaria.setPromptText("Seleccionar Tipo de Maquinaria");
+        cbTipoMaquinaria.setStyle(Estilos.INPUT_BEIGE);
+        cbTipoMaquinaria.setPrefWidth(Double.MAX_VALUE);
+        
+        // Llenamos el ComboBox con los datos reales de SQL Server
+        cbTipoMaquinaria.getItems().addAll(ConexionDB.obtenerTiposMaquinaria());
+
         Button btnGuardar = new Button("Registrar Equipo");
         btnGuardar.setStyle(Estilos.BTN_MENTA);
         btnGuardar.setPrefWidth(Double.MAX_VALUE);
@@ -96,30 +114,32 @@ public class VistasCasosDeUso {
         btnGuardar.setOnAction(e -> {
             String serie = txtSerie.getText().trim();
             String nombre = txtNombre.getText().trim();
+            TipoMaquinaria tipoSeleccionado = cbTipoMaquinaria.getValue();
 
-            // 1. Validar campos vacíos
-            if (serie.isEmpty() || nombre.isEmpty()) {
-                mostrarAlerta(Alert.AlertType.WARNING, "Campos vacíos", "Completa todos los campos para registrar el equipo.");
+            // 1. Validar campos vacíos incluyendo el ComboBox
+            if (serie.isEmpty() || nombre.isEmpty() || tipoSeleccionado == null) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Campos incompletos", "Completa todos los campos y selecciona un tipo de maquinaria.");
                 return;
             }
 
-            // 2. Validar que la máquina NO exista ya (para evitar duplicados)
+            // 2. Validar que la máquina NO exista ya
             if (ConexionDB.existeMaquinaria(serie)) {
                 mostrarAlerta(Alert.AlertType.ERROR, "Equipo duplicado", "Ya existe una máquina registrada con el número de serie '" + serie + "'.");
                 return;
             }
 
-            // 3. Insertar la nueva máquina
-            if (ConexionDB.registrarMaquinaria(serie, nombre)) {
+            // 3. Insertar la nueva máquina pasando el ID del tipo seleccionado
+            if (ConexionDB.registrarMaquinaria(serie, nombre, tipoSeleccionado.getId())) {
                 mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "La maquinaria se ha registrado correctamente.");
                 txtSerie.clear();
                 txtNombre.clear();
+                cbTipoMaquinaria.setValue(null);
             } else {
                 mostrarAlerta(Alert.AlertType.ERROR, "Error", "Ocurrió un problema al guardar en la base de datos.");
             }
         });
 
-        layout.getChildren().addAll(crearTopBar(stage, "Alta de Maquinaria"), txtSerie, txtNombre, btnGuardar);
+        layout.getChildren().addAll(crearTopBar(stage, "Alta de Maquinaria"), txtSerie, txtNombre, cbTipoMaquinaria, btnGuardar);
         return new Scene(layout, 380, 650);
     }
 
@@ -305,5 +325,95 @@ public class VistasCasosDeUso {
         alerta.setHeaderText(null);
         alerta.setContentText(mensaje);
         alerta.showAndWait();
+    }
+
+    public static Scene getModificarMaquinaria(Stage stage) {
+        VBox layout = new VBox(15);
+        layout.setPadding(new Insets(30));
+        layout.setStyle(Estilos.FONDO_PRINCIPAL);
+
+        TextField txtSerie = new TextField();
+        txtSerie.setPromptText("Número de Serie (existente)");
+        txtSerie.setStyle(Estilos.INPUT_BEIGE);
+
+        TextField txtNuevoNombre = new TextField();
+        txtNuevoNombre.setPromptText("Nuevo Nombre del Equipo");
+        txtNuevoNombre.setStyle(Estilos.INPUT_BEIGE);
+
+        Button btnGuardar = new Button("Guardar Cambios");
+        btnGuardar.setStyle(Estilos.BTN_MENTA);
+        btnGuardar.setPrefWidth(Double.MAX_VALUE);
+
+        btnGuardar.setOnAction(e -> {
+            String serie = txtSerie.getText().trim();
+            String nuevoNombre = txtNuevoNombre.getText().trim();
+
+            if (serie.isEmpty() || nuevoNombre.isEmpty()) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Campos vacíos", "Completa todos los campos para modificar el equipo.");
+                return;
+            }
+
+            if (!ConexionDB.existeMaquinaria(serie)) {
+                mostrarAlerta(Alert.AlertType.ERROR, "Serie no encontrada", "El número de serie '" + serie + "' no existe en el sistema.");
+                return;
+            }
+
+            if (ConexionDB.modificarMaquinaria(serie, nuevoNombre)) {
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "La maquinaria se ha actualizado correctamente.");
+                txtSerie.clear();
+                txtNuevoNombre.clear();
+            } else {
+                mostrarAlerta(Alert.AlertType.ERROR, "Error", "Ocurrió un problema al actualizar en la base de datos.");
+            }
+        });
+
+        layout.getChildren().addAll(crearTopBar(stage, "Modificar Maquinaria"), txtSerie, txtNuevoNombre, btnGuardar);
+        return new Scene(layout, 380, 650);
+    }
+
+    public static Scene getEliminarMaquinaria(Stage stage) {
+        VBox layout = new VBox(15);
+        layout.setPadding(new Insets(30));
+        layout.setStyle(Estilos.FONDO_PRINCIPAL);
+
+        TextField txtSerie = new TextField();
+        txtSerie.setPromptText("Número de Serie a dar de baja");
+        txtSerie.setStyle(Estilos.INPUT_BEIGE);
+
+        Button btnEliminar = new Button("Dar de Baja");
+        btnEliminar.setStyle(Estilos.BTN_PELIGRO);
+        btnEliminar.setPrefWidth(Double.MAX_VALUE);
+
+        btnEliminar.setOnAction(e -> {
+            String serie = txtSerie.getText().trim();
+
+            if (serie.isEmpty()) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Campo vacío", "Ingresa el número de serie de la maquinaria.");
+                return;
+            }
+
+            if (!ConexionDB.existeMaquinaria(serie)) {
+                mostrarAlerta(Alert.AlertType.ERROR, "Serie no encontrada", "El número de serie '" + serie + "' no existe en el sistema.");
+                return;
+            }
+
+            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmacion.setTitle("Confirmar Baja");
+            confirmacion.setHeaderText(null);
+            confirmacion.setContentText("¿Está seguro de dar de baja la maquinaria con serie: " + serie + "?");
+
+            java.util.Optional<ButtonType> resultado = confirmacion.showAndWait();
+            if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+                if (ConexionDB.eliminarMaquinaria(serie)) {
+                    mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "La maquinaria fue dada de baja (Estatus: Inactivo).");
+                    txtSerie.clear();
+                } else {
+                    mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo actualizar el estatus de la maquinaria en la base de datos.");
+                }
+            }
+        });
+
+        layout.getChildren().addAll(crearTopBar(stage, "Baja de Maquinaria"), txtSerie, btnEliminar);
+        return new Scene(layout, 380, 650);
     }
 }

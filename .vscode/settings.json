@@ -1,7 +1,26 @@
 {
-    "java.project.sourcePaths": ["src"],
+    "java.project.sourcePaths": [
+        "src"
+    ],
     "java.project.outputPath": "bin",
     "java.project.referencedLibraries": [
-        "lib/**/*.jar"
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.base.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx-swt.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.swing.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.fxml.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.web.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.graphics.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.media.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.controls.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\mssql-jdbc-13.4.0.jre11.jar",
+        "lib/javafx.base.jar",
+        "lib/javafx.controls.jar",
+        "lib/javafx.fxml.jar",
+        "lib/javafx.graphics.jar",
+        "lib/javafx.media.jar",
+        "lib/javafx.swing.jar",
+        "lib/javafx.web.jar",
+        "lib/javafx-swt.jar",
+        "lib/mssql-jdbc-13.4.0.jre11.jar"
     ]
 }

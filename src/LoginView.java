@@ -2,28 +2,46 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class LoginView {
 
+    // Método auxiliar para cargar el logo de manera limpia
+    private static ImageView crearLogo() {
+        ImageView logoView = new ImageView();
+        try {
+            Image logoImg = new Image("file:logo.png");
+            logoView.setImage(logoImg);
+            logoView.setFitWidth(75);
+            logoView.setPreserveRatio(true);
+        } catch (Exception e) {
+            System.err.println("No se pudo cargar logo.png: " + e.getMessage());
+        }
+        return logoView;
+    }
+
     public static Scene getEscenaLogin(Stage stage) {
-        VBox layout = new VBox(20);
+        VBox layout = new VBox(12);
         layout.setAlignment(Pos.CENTER);
-        layout.setPadding(new Insets(40));
+        layout.setPadding(new Insets(20, 30, 20, 30));
         layout.setStyle(Estilos.FONDO_PRINCIPAL);
 
-        Label lblLogo = new Label("I N I C I A R\nS E S I Ó N");
-        lblLogo.setStyle(Estilos.TEXTO_BLANCO + " -fx-font-size: 18px; -fx-text-alignment: center;");
-        
+        // 1. Título "Iniciar Sesión" en una sola línea en la parte superior
+        Label lblTitulo = new Label("INICIAR SESIÓN");
+        lblTitulo.setStyle(Estilos.TEXTO_BLANCO + " -fx-font-size: 16px; -fx-font-weight: bold; -fx-letter-spacing: 2px;");
+
+        // 2. Logo colocado entre el título y el texto de bienvenida
+        ImageView logoView = crearLogo();
+
+        // 3. Texto de bienvenida
         Label lblBienvenido = new Label("Bienvenido");
-        lblBienvenido.setStyle(Estilos.TITULO);
-        
-        VBox boxTextos = new VBox(5, lblLogo, new Label(""), lblBienvenido);
-        boxTextos.setAlignment(Pos.CENTER_LEFT);
+        lblBienvenido.setStyle(Estilos.TITULO + " -fx-font-size: 22px;");
 
         TextField txtEmail = new TextField();
-        txtEmail.setPromptText("Email");
+        txtEmail.setPromptText("Email o Usuario");
         txtEmail.setStyle(Estilos.INPUT_BEIGE);
         txtEmail.setMaxWidth(300);
 
@@ -39,6 +57,7 @@ public class LoginView {
         Button btnLogin = new Button("Iniciar sesión");
         btnLogin.setStyle(Estilos.BTN_MENTA);
         btnLogin.setMaxWidth(300);
+        btnLogin.setPrefHeight(40);
         
         btnLogin.setOnAction(e -> {
             String usuario = txtEmail.getText().trim();
@@ -89,36 +108,44 @@ public class LoginView {
 
         VBox boxInferior = new VBox(linkCrear);
         boxInferior.setAlignment(Pos.BOTTOM_CENTER);
-        VBox.setMargin(boxInferior, new Insets(50, 0, 0, 0));
+        VBox.setMargin(boxInferior, new Insets(10, 0, 0, 0));
 
-        layout.getChildren().addAll(boxTextos, txtEmail, txtPass, linkOlvido, btnLogin, boxInferior);
+        // Orden de elementos: Título -> Logo -> Bienvenido -> Campos -> Enlaces y Botones
+        layout.getChildren().addAll(lblTitulo, logoView, lblBienvenido, txtEmail, txtPass, linkOlvido, btnLogin, boxInferior);
         return new Scene(layout, 380, 650);
     }
 
     public static Scene getEscenaRegistro(Stage stage) {
-        VBox layout = new VBox(15);
-        layout.setPadding(new Insets(40));
+        VBox layout = new VBox(12);
+        layout.setPadding(new Insets(20, 30, 20, 30));
         layout.setAlignment(Pos.CENTER); 
         layout.setStyle(Estilos.FONDO_PRINCIPAL);
 
+        // Logo en la pantalla de Crear Cuenta
+        ImageView logoView = crearLogo();
+
         Label lblTitulo = new Label("Crear Cuenta");
-        lblTitulo.setStyle(Estilos.TITULO);
+        lblTitulo.setStyle(Estilos.TITULO + " -fx-font-size: 20px;");
 
         TextField txtNombre = new TextField();
         txtNombre.setPromptText("Nombre Completo");
         txtNombre.setStyle(Estilos.INPUT_BEIGE);
+        txtNombre.setMaxWidth(300);
 
         TextField txtUsuario = new TextField();
         txtUsuario.setPromptText("Nombre de Usuario");
         txtUsuario.setStyle(Estilos.INPUT_BEIGE);
+        txtUsuario.setMaxWidth(300);
 
         PasswordField txtPass = new PasswordField();
         txtPass.setPromptText("Contraseña");
         txtPass.setStyle(Estilos.INPUT_BEIGE);
+        txtPass.setMaxWidth(300);
 
         Button btnRegistrar = new Button("Registrarse");
         btnRegistrar.setStyle(Estilos.BTN_MENTA);
         btnRegistrar.setMaxWidth(300);
+        btnRegistrar.setPrefHeight(40);
 
         Hyperlink linkVolver = new Hyperlink("¿Ya tienes cuenta? Inicia sesión");
         linkVolver.setStyle("-fx-text-fill: #A7C7E7;"); 
@@ -134,7 +161,7 @@ public class LoginView {
                 return;
             }
 
-            // Validamos que el nombre de usuario no esté
+            // Validamos que el nombre de usuario no esté ocupado
             int checkUser = ConexionDB.validarUsuarioDetallado(usuario, pass);
             if (checkUser != 1) { 
                 mostrarAlerta(Alert.AlertType.ERROR, "Usuario ocupado", "Este nombre de usuario ya está registrado. Elige otro.");
@@ -153,7 +180,7 @@ public class LoginView {
         // Acción del link para volver atrás sin registrarse
         linkVolver.setOnAction(e -> stage.setScene(getEscenaLogin(stage)));
 
-        layout.getChildren().addAll(lblTitulo, txtNombre, txtUsuario, txtPass, btnRegistrar, linkVolver);
+        layout.getChildren().addAll(logoView, lblTitulo, txtNombre, txtUsuario, txtPass, btnRegistrar, linkVolver);
         return new Scene(layout, 380, 650);
     }
 
@@ -169,13 +196,16 @@ public class LoginView {
         TextField txtUsuario = new TextField();
         txtUsuario.setPromptText("Ingresa tu Email");
         txtUsuario.setStyle(Estilos.INPUT_BEIGE);
+        txtUsuario.setMaxWidth(300);
 
         Button btnRecuperar = new Button("Enviar Código");
         btnRecuperar.setStyle(Estilos.BTN_MENTA);
         btnRecuperar.setMaxWidth(300);
+        btnRecuperar.setPrefHeight(40);
 
         Button btnVolver = new Button("Volver al Login");
         btnVolver.setStyle(Estilos.BTN_PELIGRO);
+        btnVolver.setMaxWidth(300);
         btnVolver.setOnAction(e -> stage.setScene(getEscenaLogin(stage)));
 
         layout.getChildren().addAll(lblTitulo, txtUsuario, btnRecuperar, btnVolver);

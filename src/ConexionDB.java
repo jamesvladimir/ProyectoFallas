@@ -8,10 +8,11 @@ import java.sql.ResultSet;
 import java.util.Map;
 import java.util.HashMap;
 
+
 public class ConexionDB {
     
     
-    private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=Control_fallas;encrypt=true;trustServerCertificate=true;";
+    private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=Control_Fallas;encrypt=true;trustServerCertificate=true;";
     
     private static final String USER = "user2_abd";
     private static final String PASSWORD = "user2_abd"; 
@@ -20,7 +21,7 @@ public class ConexionDB {
         Connection conexion = null;
         try {
             conexion = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("Conexión exitosa a Control_fallas con el usuario: " + USER);
+            System.out.println("Conexión exitosa a Control_Fallas con el usuario: " + USER);
         } catch (SQLException e) {
             System.err.println("Error al conectar con la base de datos: " + e.getMessage());
         }
@@ -77,13 +78,33 @@ public class ConexionDB {
     }
 
     // 2. Inserta una nueva máquina en la BD
-    public static boolean registrarMaquinaria(String numSerie, String nombreEquipo) {
-        
-        String sql = "INSERT INTO maquinaria (num_serie, nombre_equipo, id_tipo_maquina, id_marca, id_ubicacion, id_estado) VALUES (?, ?, 1, 1, 1, 1)";
+// Obtiene la lista de tipos de maquinaria desde la BD
+    public static List<TipoMaquinaria> obtenerTiposMaquinaria() {
+        List<TipoMaquinaria> lista = new ArrayList<>();
+        String sql = "SELECT id_tipo_maquina, nombre_tipo FROM tipo_maquinaria";
+        try (Connection conn = getConnection(); 
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                lista.add(new TipoMaquinaria(
+                    rs.getInt("id_tipo_maquina"),
+                    rs.getString("nombre_tipo")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al cargar tipos de maquinaria: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    // Actualizado: Inserta la máquina recibiendo el id del tipo seleccionado en el ComboBox
+    public static boolean registrarMaquinaria(String numSerie, String nombreEquipo, int idTipoMaquina) {
+        String sql = "INSERT INTO maquinaria (num_serie, nombre_equipo, id_tipo_maquina, id_marca, id_ubicacion, id_estado) VALUES (?, ?, ?, 1, 1, 1)";
         try (Connection conn = getConnection(); 
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numSerie);
             pstmt.setString(2, nombreEquipo);
+            pstmt.setInt(3, idTipoMaquina);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Error al insertar maquinaria: " + e.getMessage());
@@ -92,13 +113,33 @@ public class ConexionDB {
     }
 
     // 3. Inserta un nuevo reporte de falla
-    public static boolean registrarFalla(String numSerie, String descripcion) {
-       
-        String sql = "INSERT INTO reportar_falla (num_serie, id_tipo_falla, descripcion) VALUES (?, 1, ?)";
+   // Obtiene la lista de tipos de falla desde la BD
+    public static List<TipoFalla> obtenerTiposFalla() {
+        List<TipoFalla> lista = new ArrayList<>();
+        String sql = "SELECT id_tipo_falla, nombre FROM tipo_falla";
+        try (Connection conn = getConnection(); 
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                lista.add(new TipoFalla(
+                    rs.getInt("id_tipo_falla"),
+                    rs.getString("nombre")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al cargar tipos de falla: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    // Actualizado: Registra la falla recibiendo el id_tipo_falla seleccionado
+    public static boolean registrarFalla(String numSerie, int idTipoFalla, String descripcion) {
+        String sql = "INSERT INTO reportar_falla (num_serie, id_tipo_falla, descripcion) VALUES (?, ?, ?)";
         try (Connection conn = getConnection(); 
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numSerie);
-            pstmt.setString(2, descripcion);
+            pstmt.setInt(2, idTipoFalla);
+            pstmt.setString(3, descripcion);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Error al insertar falla: " + e.getMessage());
@@ -203,7 +244,6 @@ public class ConexionDB {
     }
     // 9. Registra un usuario nuevo desde la pantalla de Login
     public static boolean registrarUsuarioPublico(String nombreCompleto, String usuario, String contrasena) {
-        // id_rol = 4 (Operador de Planta), id_departamento = 3 (Línea de Producción)
         String sql = "INSERT INTO usuario (nombre_completo, nombre_usuario, contrasena_hash, id_rol, id_departamento, estatus_activo) VALUES (?, ?, ?, 4, 3, 1)";
         try (Connection conn = getConnection(); 
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -212,7 +252,40 @@ public class ConexionDB {
             pstmt.setString(3, contrasena);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("Error al registrar usuario público: " + e.getMessage());
+            // Si el código de error es 2627 o 2601, es porque el nombre de usuario ya está duplicado
+            if (e.getErrorCode() == 2627 || e.getErrorCode() == 2601) {
+                System.err.println("El nombre de usuario ya está registrado.");
+            } else {
+                System.err.println("Error al registrar usuario público: " + e.getMessage());
+            }
+            return false;
+        }
+    }
+
+    // 10. Modifica el nombre de una maquinaria existente por su número de serie
+    public static boolean modificarMaquinaria(String numSerie, String nuevoNombre) {
+        String sql = "UPDATE maquinaria SET nombre_equipo = ? WHERE num_serie = ?";
+        try (Connection conn = getConnection(); 
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nuevoNombre);
+            pstmt.setString(2, numSerie);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al modificar maquinaria: " + e.getMessage());
+            return false;
+        }
+    }
+
+    
+    // 11. Da de baja  una maquinaria 
+    public static boolean eliminarMaquinaria(String numSerie) {
+        String sql = "UPDATE maquinaria SET id_estado = 2 WHERE num_serie = ?";
+        try (Connection conn = getConnection(); 
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, numSerie);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al dar de baja maquinaria: " + e.getMessage());
             return false;
         }
     }
