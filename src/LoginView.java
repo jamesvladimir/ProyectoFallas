@@ -44,11 +44,17 @@ public class LoginView {
         txtEmail.setPromptText("Email o Usuario");
         txtEmail.setStyle(Estilos.INPUT_BEIGE);
         txtEmail.setMaxWidth(300);
+        // Límite ajustado a 50 caracteres para el usuario/email
+        txtEmail.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 50 ? change : null));
 
         PasswordField txtPass = new PasswordField();
         txtPass.setPromptText("Contraseña");
         txtPass.setStyle(Estilos.INPUT_BEIGE);
         txtPass.setMaxWidth(300);
+        // Límite de 10 caracteres
+        txtPass.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 10 ? change : null));
 
         Hyperlink linkOlvido = new Hyperlink("¿Olvidaste tu contraseña?");
         linkOlvido.setStyle(Estilos.TEXTO_BLANCO);
@@ -131,16 +137,25 @@ public class LoginView {
         txtNombre.setPromptText("Nombre Completo");
         txtNombre.setStyle(Estilos.INPUT_BEIGE);
         txtNombre.setMaxWidth(300);
+        // Límite de 40 caracteres para el nombre completo
+        txtNombre.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 40 ? change : null));
 
         TextField txtUsuario = new TextField();
         txtUsuario.setPromptText("Nombre de Usuario");
         txtUsuario.setStyle(Estilos.INPUT_BEIGE);
         txtUsuario.setMaxWidth(300);
+        // Límite de 30 caracteres
+        txtUsuario.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 30 ? change : null));
 
         PasswordField txtPass = new PasswordField();
         txtPass.setPromptText("Contraseña");
         txtPass.setStyle(Estilos.INPUT_BEIGE);
         txtPass.setMaxWidth(300);
+        // Límite de 10 caracteres
+        txtPass.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 10 ? change : null));
 
         Button btnRegistrar = new Button("Registrarse");
         btnRegistrar.setStyle(Estilos.BTN_MENTA);
@@ -197,6 +212,9 @@ public class LoginView {
         txtUsuario.setPromptText("Ingresa tu Email");
         txtUsuario.setStyle(Estilos.INPUT_BEIGE);
         txtUsuario.setMaxWidth(300);
+        // Límite de 30 caracteres
+        txtUsuario.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 30 ? change : null));
 
         Button btnRecuperar = new Button("Enviar Código");
         btnRecuperar.setStyle(Estilos.BTN_MENTA);

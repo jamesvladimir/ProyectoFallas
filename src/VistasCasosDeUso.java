@@ -36,6 +36,9 @@ public class VistasCasosDeUso {
         TextField txtSerie = new TextField();
         txtSerie.setPromptText("Número de Serie");
         txtSerie.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 15 caracteres para el número de serie
+        txtSerie.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 15 ? change : null));
 
         // ComboBox para seleccionar el tipo de falla cargado desde la BD
         ComboBox<TipoFalla> cbTipoFalla = new ComboBox<>();
@@ -93,10 +96,16 @@ public class VistasCasosDeUso {
         TextField txtSerie = new TextField();
         txtSerie.setPromptText("Número de Serie");
         txtSerie.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 15 caracteres
+        txtSerie.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 15 ? change : null));
 
         TextField txtNombre = new TextField();
         txtNombre.setPromptText("Nombre del Equipo");
         txtNombre.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 15 caracteres
+        txtNombre.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 15 ? change : null));
 
         // ComboBox para desplegar los tipos de maquinaria de la BD
         ComboBox<TipoMaquinaria> cbTipoMaquinaria = new ComboBox<>();
@@ -156,8 +165,16 @@ public class VistasCasosDeUso {
         cbFallas.getItems().addAll(ConexionDB.obtenerFallasPendientes());
 
         TextField txtTiempo = new TextField();
-        txtTiempo.setPromptText("Tiempo Invertido (solo números)");
+        txtTiempo.setPromptText("Tiempo Invertido (máx. 999 min)");
         txtTiempo.setStyle(Estilos.INPUT_BEIGE);
+        // Restricción: solo números y máximo 3 dígitos (0 a 999)
+        txtTiempo.setTextFormatter(new TextFormatter<String>(change -> {
+            String newText = change.getControlNewText();
+            if (newText.matches("\\d*") && newText.length() <= 3) {
+                return change;
+            }
+            return null;
+        }));
 
         Button btnFinalizar = new Button("Actualizar Bitácora");
         btnFinalizar.setStyle(Estilos.BTN_MENTA);
@@ -211,10 +228,16 @@ public class VistasCasosDeUso {
         TextField txtUsuario = new TextField();
         txtUsuario.setPromptText("Usuario para Login");
         txtUsuario.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 30 caracteres para el usuario
+        txtUsuario.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 30 ? change : null));
 
         PasswordField txtPass = new PasswordField();
         txtPass.setPromptText("Contraseña");
         txtPass.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 10 caracteres para la contraseña
+        txtPass.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 10 ? change : null));
 
         Button btnRegistrar = new Button("Registrar Personal");
         btnRegistrar.setStyle(Estilos.BTN_MENTA);
@@ -335,10 +358,16 @@ public class VistasCasosDeUso {
         TextField txtSerie = new TextField();
         txtSerie.setPromptText("Número de Serie (existente)");
         txtSerie.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 15 caracteres
+        txtSerie.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 15 ? change : null));
 
         TextField txtNuevoNombre = new TextField();
         txtNuevoNombre.setPromptText("Nuevo Nombre del Equipo");
         txtNuevoNombre.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 15 caracteres
+        txtNuevoNombre.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 15 ? change : null));
 
         Button btnGuardar = new Button("Guardar Cambios");
         btnGuardar.setStyle(Estilos.BTN_MENTA);
@@ -379,6 +408,9 @@ public class VistasCasosDeUso {
         TextField txtSerie = new TextField();
         txtSerie.setPromptText("Número de Serie a dar de baja");
         txtSerie.setStyle(Estilos.INPUT_BEIGE);
+        // Límite de 15 caracteres
+        txtSerie.setTextFormatter(new TextFormatter<String>(change -> 
+            change.getControlNewText().length() <= 15 ? change : null));
 
         Button btnEliminar = new Button("Dar de Baja");
         btnEliminar.setStyle(Estilos.BTN_PELIGRO);
