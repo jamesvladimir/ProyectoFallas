@@ -5,290 +5,287 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.Map;
 import java.util.HashMap;
 
-
 public class ConexionDB {
     
-    
     private static final String URL = "jdbc:sqlserver://localhost:1433;databaseName=Control_Fallas;encrypt=true;trustServerCertificate=true;";
-    
     private static final String USER = "user2_abd";
     private static final String PASSWORD = "user2_abd"; 
+    
+    // Variable global para almacenar el rol del usuario conectado
+    public static int idRolActual = 0;
 
     public static Connection getConnection() {
         Connection conexion = null;
         try {
             conexion = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("Conexión exitosa a Control_Fallas con el usuario: " + USER);
         } catch (SQLException e) {
-            System.err.println("Error al conectar con la base de datos: " + e.getMessage());
+            System.err.println("Error al conectar BD: " + e.getMessage());
         }
         return conexion;
     }
     
-    public static void main(String[] args) {
-        getConnection();
-    }
-    
     public static int validarUsuarioDetallado(String nombreUsuario, String contrasena) {
-        String sql = "SELECT contrasena_hash, estatus_activo FROM usuario WHERE nombre_usuario = ?";
-        
+        String sql = "SELECT contrasena_hash, estatus_activo, id_rol FROM usuario WHERE nombre_usuario = ? OR correo_electronico = ?";
         try (Connection conn = getConnection(); 
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
             pstmt.setString(1, nombreUsuario);
+            pstmt.setString(2, nombreUsuario);
             ResultSet rs = pstmt.executeQuery();
             
             if (rs.next()) {
                 String bdPass = rs.getString("contrasena_hash");
                 boolean activo = rs.getBoolean("estatus_activo");
-                
-                if (!activo) {
-                    return 3; // El usuario existe pero está dado de baja
-                }
+                if (!activo) return 3;
                 
                 if (bdPass.equals(contrasena)) {
-                    return 0; // Todo es correcto
+                    idRolActual = rs.getInt("id_rol"); // Guardamos el rol en sesión
+                    return 0; 
                 } else {
-                    return 2; // El usuario existe, pero la contraseña no coincide
+                    return 2; 
                 }
             } else {
-                return 1; // No se encontró ningún registro con ese nombre de usuario
+                return 1; 
             }
         } catch (SQLException e) {
-            System.err.println("Error al validar usuario: " + e.getMessage());
             return -1;
         }
     }
 
-    // 1. Verifica si una máquina ya está registrada
     public static boolean existeMaquinaria(String numSerie) {
         String sql = "SELECT num_serie FROM maquinaria WHERE num_serie = ?";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numSerie);
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next(); // Retorna true si encontró el número de serie
-        } catch (SQLException e) {
-            System.err.println("Error al buscar maquinaria: " + e.getMessage());
-            return false;
-        }
+            return pstmt.executeQuery().next();
+        } catch (SQLException e) { return false; }
     }
 
-    // 2. Inserta una nueva máquina en la BD
-// Obtiene la lista de tipos de maquinaria desde la BD
     public static List<TipoMaquinaria> obtenerTiposMaquinaria() {
         List<TipoMaquinaria> lista = new ArrayList<>();
         String sql = "SELECT id_tipo_maquina, nombre_tipo FROM tipo_maquinaria";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                lista.add(new TipoMaquinaria(
-                    rs.getInt("id_tipo_maquina"),
-                    rs.getString("nombre_tipo")
-                ));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cargar tipos de maquinaria: " + e.getMessage());
-        }
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new TipoMaquinaria(rs.getInt(1), rs.getString(2)));
+        } catch (SQLException e) {}
         return lista;
     }
 
-    // Actualizado: Inserta la máquina recibiendo el id del tipo seleccionado en el ComboBox
     public static boolean registrarMaquinaria(String numSerie, String nombreEquipo, int idTipoMaquina) {
         String sql = "INSERT INTO maquinaria (num_serie, nombre_equipo, id_tipo_maquina, id_marca, id_ubicacion, id_estado) VALUES (?, ?, ?, 1, 1, 1)";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numSerie);
             pstmt.setString(2, nombreEquipo);
             pstmt.setInt(3, idTipoMaquina);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al insertar maquinaria: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
 
-    // 3. Inserta un nuevo reporte de falla
-   // Obtiene la lista de tipos de falla desde la BD
     public static List<TipoFalla> obtenerTiposFalla() {
         List<TipoFalla> lista = new ArrayList<>();
         String sql = "SELECT id_tipo_falla, nombre FROM tipo_falla";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                lista.add(new TipoFalla(
-                    rs.getInt("id_tipo_falla"),
-                    rs.getString("nombre")
-                ));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cargar tipos de falla: " + e.getMessage());
-        }
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new TipoFalla(rs.getInt(1), rs.getString(2)));
+        } catch (SQLException e) {}
         return lista;
     }
 
-    // Actualizado: Registra la falla recibiendo el id_tipo_falla seleccionado
     public static boolean registrarFalla(String numSerie, int idTipoFalla, String descripcion) {
         String sql = "INSERT INTO reportar_falla (num_serie, id_tipo_falla, descripcion) VALUES (?, ?, ?)";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numSerie);
             pstmt.setInt(2, idTipoFalla);
             pstmt.setString(3, descripcion);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al insertar falla: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
-    // 4. Obtiene la lista de fallas que NO han sido atendidas 
+
     public static List<String> obtenerFallasPendientes() {
         List<String> fallas = new ArrayList<>();
-        // Un LEFT JOIN para buscar fallas que no existan 
-        String sql = "SELECT f.id_falla, f.num_serie FROM reportar_falla f " +
-                     "LEFT JOIN actualizar_bitacora b ON f.id_falla = b.id_falla " +
-                     "WHERE b.id_falla IS NULL";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                fallas.add(rs.getInt("id_falla") + " - Máquina: " + rs.getString("num_serie"));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cargar fallas pendientes: " + e.getMessage());
-        }
+        String sql = "SELECT f.id_falla, f.num_serie FROM reportar_falla f LEFT JOIN actualizar_bitacora b ON f.id_falla = b.id_falla WHERE b.id_falla IS NULL";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) fallas.add(rs.getInt("id_falla") + " - Máquina: " + rs.getString("num_serie"));
+        } catch (SQLException e) {}
         return fallas;
     }
 
-    // 5. Guarda la atención de la falla en la bitácora
-    public static boolean registrarBitacora(int idFalla, int tiempoReparacion) {
-        // Para este ejemplo, asignaremos id_causa = 1 (Desgaste natural) por defecto
-        String sql = "INSERT INTO actualizar_bitacora (id_falla, tiempo_reparacion_minutos, id_causa) VALUES (?, ?, 1)";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, idFalla);
-            pstmt.setInt(2, tiempoReparacion);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al actualizar bitácora: " + e.getMessage());
-            return false;
-        }
-    }
+    // --- MÉTODOS NUEVOS BLOQUE 2 ---
 
-    // 6. Crea un nuevo usuario Técnico
-    public static boolean registrarTecnico(String nombreCompleto, String usuario, String contrasena) {
-        String sql = "INSERT INTO usuario (nombre_completo, nombre_usuario, contrasena_hash, id_rol, id_departamento, estatus_activo) VALUES (?, ?, ?, 3, 2, 1)";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, nombreCompleto);
-            pstmt.setString(2, usuario);
-            pstmt.setString(3, contrasena);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al insertar técnico: " + e.getMessage());
-            return false;
-        }
-    }
-    // 7. Obtiene el conteo de fallas agrupadas por tipo para el Dashboard
-    public static Map<String, Integer> obtenerFallasPorTipo() {
-        Map<String, Integer> datos = new HashMap<>();
-        // JOIN para obtener el nombre de la falla y contar cuántas veces aparece
-        String sql = "SELECT t.nombre, COUNT(r.id_falla) as total " +
-                     "FROM reportar_falla r " +
-                     "INNER JOIN tipo_falla t ON r.id_tipo_falla = t.id_tipo_falla " +
-                     "GROUP BY t.nombre";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                datos.put(rs.getString("nombre"), rs.getInt("total"));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cargar datos del dashboard: " + e.getMessage());
-        }
-        return datos;
-    }
-    // 8. Obtiene el historial de todas las fallas para la tabla de reportes
-    public static List<ModeloReporte> obtenerHistorialFallas() {
-        List<ModeloReporte> lista = new ArrayList<>();
-        
-        // El LEFT JOIN verifica si la falla existe en la bitácora 
-        String sql = "SELECT r.id_falla, r.num_serie, t.nombre AS tipo_falla, " +
-                     "CASE WHEN b.id_falla IS NULL THEN 'Pendiente' ELSE 'Atendida' END AS estado " +
-                     "FROM reportar_falla r " +
-                     "INNER JOIN tipo_falla t ON r.id_tipo_falla = t.id_tipo_falla " +
-                     "LEFT JOIN actualizar_bitacora b ON r.id_falla = b.id_falla " +
-                     "ORDER BY r.fecha_reporte DESC";
-        
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
-            while (rs.next()) {
-                lista.add(new ModeloReporte(
-                    rs.getInt("id_falla"),
-                    rs.getString("num_serie"),
-                    rs.getString("tipo_falla"),
-                    rs.getString("estado")
-                ));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al cargar historial de reportes: " + e.getMessage());
-        }
+    public static List<Departamento> obtenerDepartamentos() {
+        List<Departamento> lista = new ArrayList<>();
+        String sql = "SELECT id_departamento, nombre_departamento FROM departamento";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new Departamento(rs.getInt(1), rs.getString(2)));
+        } catch (SQLException e) {}
         return lista;
     }
-    // 9. Registra un usuario nuevo desde la pantalla de Login
+
+    public static List<CausaRaiz> obtenerCausasRaiz() {
+        List<CausaRaiz> lista = new ArrayList<>();
+        String sql = "SELECT id_causa, nombre FROM causa_raiz";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new CausaRaiz(rs.getInt(1), rs.getString(2)));
+        } catch (SQLException e) {}
+        return lista;
+    }
+
+    public static List<Refaccion> obtenerRefacciones() {
+        List<Refaccion> lista = new ArrayList<>();
+        String sql = "SELECT id_refaccion, nombre FROM refacciones";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new Refaccion(rs.getInt(1), rs.getString(2)));
+        } catch (SQLException e) {}
+        return lista;
+    }
+
+    public static List<MaquinariaCatalogo> obtenerMaquinasActivas() {
+        List<MaquinariaCatalogo> lista = new ArrayList<>();
+        String sql = "SELECT num_serie, nombre_equipo FROM maquinaria WHERE id_estado = 1";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new MaquinariaCatalogo(rs.getString(1), rs.getString(2)));
+        } catch (SQLException e) {}
+        return lista;
+    }
+
+    // Actualizado Bloque 2: Incluye inserción en tablas de detalle (transaccional)
+    public static boolean registrarBitacoraDetallada(int idFalla, int tiempo, int idCausa, int idRefaccion, int cantidad) {
+        String sqlBitacora = "INSERT INTO actualizar_bitacora (id_falla, tiempo_reparacion_minutos, id_causa) VALUES (?, ?, ?)";
+        String sqlDetalle = "INSERT INTO detalle_bitacora_refaccion (id_bitacora, id_refaccion, cantidad_utilizada) VALUES (?, ?, ?)";
+        
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false); // Iniciamos transacción
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlBitacora, Statement.RETURN_GENERATED_KEYS)) {
+                pstmt.setInt(1, idFalla);
+                pstmt.setInt(2, tiempo);
+                pstmt.setInt(3, idCausa);
+                pstmt.executeUpdate();
+                
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    int idBitacora = rs.getInt(1);
+                    try (PreparedStatement pstDetalle = conn.prepareStatement(sqlDetalle)) {
+                        pstDetalle.setInt(1, idBitacora);
+                        pstDetalle.setInt(2, idRefaccion);
+                        pstDetalle.setInt(3, cantidad);
+                        pstDetalle.executeUpdate();
+                    }
+                }
+                conn.commit();
+                return true;
+            } catch (SQLException ex) {
+                conn.rollback();
+                return false;
+            }
+        } catch (SQLException e) { return false; }
+    }
+
+    public static boolean registrarMantenimiento(String numSerie, int umbral, String tipoUmbral, int idRefaccion, int cantidad) {
+        String sqlMant = "INSERT INTO mantenimiento_preventivo (num_serie, umbral_uso, tipo_umbral) VALUES (?, ?, ?)";
+        String sqlDetalle = "INSERT INTO detalle_mantenimiento_pieza (id_mantenimiento, id_refaccion, cantidad) VALUES (?, ?, ?)";
+        
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlMant, Statement.RETURN_GENERATED_KEYS)) {
+                pstmt.setString(1, numSerie);
+                pstmt.setInt(2, umbral);
+                pstmt.setString(3, tipoUmbral);
+                pstmt.executeUpdate();
+                
+                ResultSet rs = pstmt.getGeneratedKeys();
+                if (rs.next()) {
+                    int idMant = rs.getInt(1);
+                    try (PreparedStatement pstDetalle = conn.prepareStatement(sqlDetalle)) {
+                        pstDetalle.setInt(1, idMant);
+                        pstDetalle.setInt(2, idRefaccion);
+                        pstDetalle.setInt(3, cantidad);
+                        pstDetalle.executeUpdate();
+                    }
+                }
+                conn.commit();
+                return true;
+            } catch (SQLException ex) {
+                conn.rollback();
+                return false;
+            }
+        } catch (SQLException e) { return false; }
+    }
+
+    public static double[] obtenerMetricasDashboard() {
+        // [0] = MTTR (Promedio de minutos), [1] = MTBF simulado
+        double[] metricas = new double[]{0.0, 0.0};
+        String sql = "SELECT AVG(tiempo_reparacion_minutos) as mttr, COUNT(id_falla) as total_fallas FROM actualizar_bitacora";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                metricas[0] = rs.getDouble("mttr");
+                int totalFallas = rs.getInt("total_fallas");
+                // Cálculo simple de MTBF (Simulando mes de 43200 minutos - tiempo muerto) / fallas
+                if (totalFallas > 0) {
+                    metricas[1] = (43200.0 - (totalFallas * metricas[0])) / totalFallas;
+                }
+            }
+        } catch (SQLException e) {}
+        return metricas;
+    }
+
+    // Actualizado Bloque 2: Se agregó correo y especialidad (id_rol 3 = Técnico)
+    public static boolean registrarTecnico(String nombre, String usuario, String pass, String correo, int idDepto, String especialidad) {
+        String sql = "INSERT INTO usuario (nombre_completo, nombre_usuario, contrasena_hash, correo_electronico, id_rol, id_departamento, especialidad_tecnica) VALUES (?, ?, ?, ?, 3, ?, ?)";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nombre);
+            pstmt.setString(2, usuario);
+            pstmt.setString(3, pass);
+            pstmt.setString(4, correo);
+            pstmt.setInt(5, idDepto);
+            pstmt.setString(6, especialidad);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) { return false; }
+    }
+
+    // --- MÉTODOS PREVIOS RESTANTES ---
+    public static Map<String, Integer> obtenerFallasPorTipo() {
+        Map<String, Integer> datos = new HashMap<>();
+        String sql = "SELECT t.nombre, COUNT(r.id_falla) as total FROM reportar_falla r INNER JOIN tipo_falla t ON r.id_tipo_falla = t.id_tipo_falla GROUP BY t.nombre";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) datos.put(rs.getString("nombre"), rs.getInt("total"));
+        } catch (SQLException e) {}
+        return datos;
+    }
+
+    public static List<ModeloReporte> obtenerHistorialFallas() {
+        List<ModeloReporte> lista = new ArrayList<>();
+        String sql = "SELECT r.id_falla, r.num_serie, t.nombre AS tipo_falla, CASE WHEN b.id_falla IS NULL THEN 'Pendiente' ELSE 'Atendida' END AS estado FROM reportar_falla r INNER JOIN tipo_falla t ON r.id_tipo_falla = t.id_tipo_falla LEFT JOIN actualizar_bitacora b ON r.id_falla = b.id_falla ORDER BY r.fecha_reporte DESC";
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) lista.add(new ModeloReporte(rs.getInt("id_falla"), rs.getString("num_serie"), rs.getString("tipo_falla"), rs.getString("estado")));
+        } catch (SQLException e) {}
+        return lista;
+    }
+
     public static boolean registrarUsuarioPublico(String nombreCompleto, String usuario, String contrasena) {
         String sql = "INSERT INTO usuario (nombre_completo, nombre_usuario, contrasena_hash, id_rol, id_departamento, estatus_activo) VALUES (?, ?, ?, 4, 3, 1)";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, nombreCompleto);
             pstmt.setString(2, usuario);
             pstmt.setString(3, contrasena);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            // Si el código de error es 2627 o 2601, es porque el nombre de usuario ya está duplicado
-            if (e.getErrorCode() == 2627 || e.getErrorCode() == 2601) {
-                System.err.println("El nombre de usuario ya está registrado.");
-            } else {
-                System.err.println("Error al registrar usuario público: " + e.getMessage());
-            }
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
 
-    // 10. Modifica el nombre de una maquinaria existente por su número de serie
     public static boolean modificarMaquinaria(String numSerie, String nuevoNombre) {
         String sql = "UPDATE maquinaria SET nombre_equipo = ? WHERE num_serie = ?";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, nuevoNombre);
             pstmt.setString(2, numSerie);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al modificar maquinaria: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
 
-    
-    // 11. Da de baja  una maquinaria 
     public static boolean eliminarMaquinaria(String numSerie) {
         String sql = "UPDATE maquinaria SET id_estado = 2 WHERE num_serie = ?";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, numSerie);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al dar de baja maquinaria: " + e.getMessage());
-            return false;
-        }
+        } catch (SQLException e) { return false; }
     }
 }
-
     
