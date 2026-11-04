@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Lanzador",
+            "request": "launch",
+            "mainClass": "Lanzador",
+            "projectName": "proyectoFallas_c1c49c3e"
+        },
+        {
+            "type": "java",
+            "name": "Lanzador",
+            "request": "launch",
+            "mainClass": "Lanzador",
+            "projectName": "proyectoFallas_facf7319"
+        },
+        {
+            "type": "java",
+            "name": "Ejecutar Lanzador",
+            "request": "launch",
+            "mainClass": "Lanzador",
+            "projectName": "proyectoFallas",
+            "vmArgs": "--module-path \"lib\" --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.media,javafx.swing,javafx.web"
+        }
+    ]
+}

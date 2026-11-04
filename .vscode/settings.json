@@ -3,14 +3,16 @@
         "src"
     ],
     "java.project.outputPath": "bin",
+    "java.compile.sourceCompatibility": "21",
+    "java.compile.targetCompatibility": "21",
     "java.project.referencedLibraries": [
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.base.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx-swt.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.swing.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.fxml.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.web.jar",
-        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.graphics.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.media.jar",
+        "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.graphics.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\javafx.controls.jar",
         "c:\\Users\\LENOVO}\\Downloads\\7 semestre\\Ing de Software\\proyectoFallas\\lib\\mssql-jdbc-13.4.0.jre11.jar",
         "lib/javafx.base.jar",
