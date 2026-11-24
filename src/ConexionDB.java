@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Map;
 import java.util.HashMap;
+import java.sql.Date;
+import java.time.LocalDate;
 
 public class ConexionDB {
     
@@ -286,6 +288,102 @@ public class ConexionDB {
             pstmt.setString(1, numSerie);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) { return false; }
+    }
+    // --- BLOQUE 3 ---
+
+    public static List<RegistroReportePDF> obtenerDatosReportePDF(String numSerie, LocalDate inicio, LocalDate fin) {
+        List<RegistroReportePDF> lista = new ArrayList<>();
+        String sql = "SELECT r.id_falla, m.nombre_equipo, tf.nombre AS tipo_falla, " +
+                     "ISNULL(cr.nombre, 'Pendiente') AS causa_raiz, " +
+                     "ISNULL(ref.nombre, 'Ninguna') AS refaccion, " +
+                     "ISNULL(b.tiempo_reparacion_minutos, 0) AS tiempo_min, " +
+                     "CONVERT(VARCHAR(10), r.fecha_reporte, 120) AS fecha " +
+                     "FROM reportar_falla r " +
+                     "INNER JOIN maquinaria m ON r.num_serie = m.num_serie " +
+                     "INNER JOIN tipo_falla tf ON r.id_tipo_falla = tf.id_tipo_falla " +
+                     "LEFT JOIN actualizar_bitacora b ON r.id_falla = b.id_falla " +
+                     "LEFT JOIN causa_raiz cr ON b.id_causa = cr.id_causa " +
+                     "LEFT JOIN detalle_bitacora_refaccion dbr ON b.id_bitacora = dbr.id_bitacora " +
+                     "LEFT JOIN refacciones ref ON dbr.id_refaccion = ref.id_refaccion " +
+                     "WHERE CAST(r.fecha_reporte AS DATE) BETWEEN ? AND ? ";
+
+        if (numSerie != null && !numSerie.equals("TODAS")) {
+            sql += "AND r.num_serie = ? ";
+        }
+        sql += "ORDER BY r.fecha_reporte DESC";
+
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setDate(1, Date.valueOf(inicio));
+            pstmt.setDate(2, Date.valueOf(fin));
+            if (numSerie != null && !numSerie.equals("TODAS")) {
+                pstmt.setString(3, numSerie);
+            }
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                lista.add(new RegistroReportePDF(
+                    rs.getInt("id_falla"),
+                    rs.getString("nombre_equipo"),
+                    rs.getString("tipo_falla"),
+                    rs.getString("causa_raiz"),
+                    rs.getString("refaccion"),
+                    rs.getInt("tiempo_min"),
+                    rs.getString("fecha")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error consulta reporte PDF: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    public static List<SolucionHistorica> buscarSolucionesPrevias(int idTipoFalla, String palabraClave) {
+        List<SolucionHistorica> lista = new ArrayList<>();
+        String sql = "SELECT TOP 15 m.nombre_equipo, tf.nombre AS tipo_falla, r.descripcion, " +
+                     "cr.nombre AS causa_raiz, ISNULL(ref.nombre, 'Sin refacción') AS refaccion, " +
+                     "b.tiempo_reparacion_minutos " +
+                     "FROM actualizar_bitacora b " +
+                     "INNER JOIN reportar_falla r ON b.id_falla = r.id_falla " +
+                     "INNER JOIN maquinaria m ON r.num_serie = m.num_serie " +
+                     "INNER JOIN tipo_falla tf ON r.id_tipo_falla = tf.id_tipo_falla " +
+                     "INNER JOIN causa_raiz cr ON b.id_causa = cr.id_causa " +
+                     "LEFT JOIN detalle_bitacora_refaccion dbr ON b.id_bitacora = dbr.id_bitacora " +
+                     "LEFT JOIN refacciones ref ON dbr.id_refaccion = ref.id_refaccion " +
+                     "WHERE 1=1 ";
+
+        if (idTipoFalla > 0) {
+            sql += "AND r.id_tipo_falla = ? ";
+        }
+        if (palabraClave != null && !palabraClave.trim().isEmpty()) {
+            sql += "AND (r.descripcion LIKE ? OR cr.nombre LIKE ? OR m.nombre_equipo LIKE ?) ";
+        }
+        sql += "ORDER BY b.fecha_reparacion DESC";
+
+        try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            int idx = 1;
+            if (idTipoFalla > 0) {
+                pstmt.setInt(idx++, idTipoFalla);
+            }
+            if (palabraClave != null && !palabraClave.trim().isEmpty()) {
+                String filtro = "%" + palabraClave.trim() + "%";
+                pstmt.setString(idx++, filtro);
+                pstmt.setString(idx++, filtro);
+                pstmt.setString(idx++, filtro);
+            }
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                lista.add(new SolucionHistorica(
+                    rs.getString("nombre_equipo"),
+                    rs.getString("tipo_falla"),
+                    rs.getString("descripcion"),
+                    rs.getString("causa_raiz"),
+                    rs.getString("refaccion"),
+                    rs.getInt("tiempo_reparacion_minutos")
+                ));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error consulta historial soluciones: " + e.getMessage());
+        }
+        return lista;
     }
 }
     

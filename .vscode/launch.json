@@ -16,12 +16,11 @@
             "projectName": "proyectoFallas_facf7319"
         },
         {
-            "type": "java",
-            "name": "Ejecutar Lanzador",
-            "request": "launch",
-            "mainClass": "Lanzador",
-            "projectName": "proyectoFallas",
-            "vmArgs": "--module-path \"lib\" --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.media,javafx.swing,javafx.web"
-        }
+    "type": "java",
+    "name": "Ejecutar Lanzador",
+    "request": "launch",
+    "mainClass": "Lanzador",
+    "vmArgs": "-Djava.library.path=\"lib\" --module-path \"lib\" --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base,javafx.media,javafx.swing,javafx.web --enable-native-access=ALL-UNNAMED"
+}
     ]
 }

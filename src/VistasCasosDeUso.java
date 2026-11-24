@@ -12,6 +12,9 @@ import java.util.List;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import java.io.File;
+import java.time.LocalDate;
+import javafx.stage.FileChooser;
 
 public class VistasCasosDeUso {
 
@@ -392,11 +395,10 @@ public class VistasCasosDeUso {
         double[] metricas = ConexionDB.obtenerMetricasDashboard();
         
         Label lblMTTR = new Label(String.format("MTTR:\n%.1f min", metricas[0]));
-        lblMTTR.setStyle("-fx-background-color: #f3efe6; -fx-text-fill: #1a4449; -fx-padding: 10px; -fx-background-radius: 8px; -fx-font-weight: bold; -fx-text-alignment: center;");
-        
-        Label lblMTBF = new Label(String.format("MTBF:\n%.1f min", metricas[1]));
-        lblMTBF.setStyle("-fx-background-color: #aecfc0; -fx-text-fill: #1a4449; -fx-padding: 10px; -fx-background-radius: 8px; -fx-font-weight: bold; -fx-text-alignment: center;");
-        
+        lblMTTR.setStyle("-fx-background-color: #F5F2EB; -fx-text-fill: #0F1E36; -fx-padding: 12px 16px; -fx-background-radius: 12px; -fx-font-weight: bold; -fx-text-alignment: center;");
+
+Label lblMTBF = new Label(String.format("MTBF:\n%.1f min", metricas[1]));
+lblMTBF.setStyle("-fx-background-color: #E6DCCD; -fx-text-fill: #0F1E36; -fx-padding: 12px 16px; -fx-background-radius: 12px; -fx-font-weight: bold; -fx-text-alignment: center;");
         boxMetricas.getChildren().addAll(lblMTTR, lblMTBF);
 
         PieChart graficaFallas = new PieChart();
@@ -545,6 +547,161 @@ public class VistasCasosDeUso {
         });
 
         layout.getChildren().addAll(crearTopBar(stage, "Baja de Maquinaria"), txtSerie, btnEliminar);
+        return new Scene(layout, 380, 650);
+    }
+    
+    // --- BLOQUE 3 ---
+
+    public static Scene getReportePDF(Stage stage) {
+        VBox layout = new VBox(15);
+        layout.setPadding(new Insets(25, 30, 25, 30));
+        layout.setStyle(Estilos.FONDO_PRINCIPAL);
+
+        Label lblSub = new Label("Exportar historial y métricas en documento PDF");
+        lblSub.setStyle("-fx-text-fill: #CBD5E1; -fx-font-size: 12px;");
+        lblSub.setWrapText(true);
+
+        ComboBox<MaquinariaCatalogo> cbMaquina = new ComboBox<>();
+        cbMaquina.setPromptText("Alcance: Todas las máquinas");
+        cbMaquina.setStyle(Estilos.INPUT_BEIGE);
+        cbMaquina.setPrefWidth(Double.MAX_VALUE);
+        cbMaquina.getItems().add(new MaquinariaCatalogo("TODAS", "Todas las máquinas"));
+        cbMaquina.getItems().addAll(ConexionDB.obtenerMaquinasActivas());
+        cbMaquina.getSelectionModel().selectFirst();
+
+        Label lblInicio = new Label("Fecha Inicio:");
+        lblInicio.setStyle("-fx-text-fill: #E6DCCD; -fx-font-weight: bold; -fx-font-size: 12px;");
+        DatePicker dpInicio = new DatePicker(LocalDate.now().minusMonths(1));
+        dpInicio.setStyle(Estilos.INPUT_BEIGE);
+        dpInicio.setPrefWidth(Double.MAX_VALUE);
+
+        Label lblFin = new Label("Fecha Fin:");
+        lblFin.setStyle("-fx-text-fill: #E6DCCD; -fx-font-weight: bold; -fx-font-size: 12px;");
+        DatePicker dpFin = new DatePicker(LocalDate.now());
+        dpFin.setStyle(Estilos.INPUT_BEIGE);
+        dpFin.setPrefWidth(Double.MAX_VALUE);
+
+        Button btnExportar = new Button("Exportar a PDF");
+        btnExportar.setStyle(Estilos.BTN_MENTA);
+        btnExportar.setPrefWidth(Double.MAX_VALUE);
+        btnExportar.setPrefHeight(46);
+        btnExportar.setOnMouseEntered(e -> btnExportar.setStyle(Estilos.BTN_MENTA_HOVER));
+        btnExportar.setOnMouseExited(e -> btnExportar.setStyle(Estilos.BTN_MENTA));
+
+        btnExportar.setOnAction(e -> {
+            LocalDate inicio = dpInicio.getValue();
+            LocalDate fin = dpFin.getValue();
+            MaquinariaCatalogo seleccion = cbMaquina.getValue();
+
+            if (inicio == null || fin == null || seleccion == null) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Campos incompletos", "Selecciona el alcance y ambas fechas.");
+                return;
+            }
+            if (inicio.isAfter(fin)) {
+                mostrarAlerta(Alert.AlertType.WARNING, "Rango inválido", "La fecha inicial no puede ser posterior a la fecha final.");
+                return;
+            }
+
+            List<RegistroReportePDF> datos = ConexionDB.obtenerDatosReportePDF(seleccion.getNumSerie(), inicio, fin);
+            if (datos.isEmpty()) {
+                mostrarAlerta(Alert.AlertType.INFORMATION, "Sin resultados", "No se encontraron registros de fallas en el rango seleccionado.");
+                return;
+            }
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Guardar Reporte PDF");
+            fileChooser.setInitialFileName("Reporte_Fallas_" + LocalDate.now() + ".pdf");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Documentos PDF (*.pdf)", "*.pdf"));
+            File archivo = fileChooser.showSaveDialog(stage);
+
+            if (archivo != null) {
+                if (GeneradorPDF.exportarReporte(archivo, datos, inicio, fin, seleccion.toString())) {
+                    mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Reporte PDF generado exitosamente.");
+                } else {
+                    mostrarAlerta(Alert.AlertType.ERROR, "Error", "Ocurrió un problema al escribir el archivo PDF.");
+                }
+            }
+        });
+
+        layout.getChildren().addAll(
+            crearTopBar(stage, "Reporte PDF"),
+            lblSub, cbMaquina, lblInicio, dpInicio, lblFin, dpFin, btnExportar
+        );
+        return new Scene(layout, 380, 650);
+    }
+
+    public static Scene getHistorialSoluciones(Stage stage) {
+        VBox layout = new VBox(12);
+        layout.setPadding(new Insets(25, 25, 20, 25));
+        layout.setStyle(Estilos.FONDO_PRINCIPAL);
+
+        ComboBox<TipoFalla> cbTipo = new ComboBox<>();
+        cbTipo.setStyle(Estilos.INPUT_BEIGE);
+        cbTipo.setPrefWidth(Double.MAX_VALUE);
+        cbTipo.getItems().add(new TipoFalla(0, "Todos los tipos de falla"));
+        cbTipo.getItems().addAll(ConexionDB.obtenerTiposFalla());
+        cbTipo.getSelectionModel().selectFirst();
+
+        TextField txtBuscar = new TextField();
+        txtBuscar.setPromptText("Síntoma o palabra clave (Ej: motor)");
+        txtBuscar.setStyle(Estilos.INPUT_BEIGE);
+
+        Button btnBuscar = new Button("Buscar Solución");
+        btnBuscar.setStyle(Estilos.BTN_MENTA);
+        btnBuscar.setPrefWidth(Double.MAX_VALUE);
+        btnBuscar.setPrefHeight(40);
+        btnBuscar.setOnMouseEntered(e -> btnBuscar.setStyle(Estilos.BTN_MENTA_HOVER));
+        btnBuscar.setOnMouseExited(e -> btnBuscar.setStyle(Estilos.BTN_MENTA));
+
+        VBox contenedorTarjetas = new VBox(10);
+        contenedorTarjetas.setPadding(new Insets(5));
+
+        ScrollPane scroll = new ScrollPane(contenedorTarjetas);
+        scroll.setFitToWidth(true);
+        scroll.setPrefHeight(360);
+        scroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+
+        Runnable ejecutarBusqueda = () -> {
+            contenedorTarjetas.getChildren().clear();
+            int idTipo = cbTipo.getValue() != null ? cbTipo.getValue().getId() : 0;
+            List<SolucionHistorica> resultados = ConexionDB.buscarSolucionesPrevias(idTipo, txtBuscar.getText());
+
+            if (resultados.isEmpty()) {
+                Label lblVacio = new Label("No se encontraron soluciones previas para ese criterio de búsqueda.");
+                lblVacio.setStyle("-fx-text-fill: #E6DCCD; -fx-font-size: 13px; -fx-padding: 15;");
+                lblVacio.setWrapText(true);
+                contenedorTarjetas.getChildren().add(lblVacio);
+                return;
+            }
+
+            for (SolucionHistorica sol : resultados) {
+                VBox tarjeta = new VBox(4);
+                tarjeta.setStyle("-fx-background-color: #F5F2EB; -fx-background-radius: 12px; -fx-padding: 10 12 10 12;");
+
+                Label lblHeader = new Label("⚙️ " + sol.getEquipo() + " (" + sol.getTipoFalla() + ")");
+                lblHeader.setStyle("-fx-text-fill: #0F1E36; -fx-font-weight: bold; -fx-font-size: 12px;");
+
+                Label lblFalla = new Label("Falla: " + sol.getDescripcionFalla());
+                lblFalla.setStyle("-fx-text-fill: #475569; -fx-font-size: 11px;");
+                lblFalla.setWrapText(true);
+
+                Label lblCausa = new Label("✅ Causa raíz: " + sol.getCausaRaiz());
+                lblCausa.setStyle("-fx-text-fill: #0F1E36; -fx-font-weight: bold; -fx-font-size: 11px;");
+                lblCausa.setWrapText(true);
+
+                Label lblDetalle = new Label("🔧 Refacción: " + sol.getRefaccion() + "  |  ⏱️ " + sol.getTiempoMinutos() + " min");
+                lblDetalle.setStyle("-fx-text-fill: #C85A48; -fx-font-weight: bold; -fx-font-size: 11px;");
+
+                tarjeta.getChildren().addAll(lblHeader, lblFalla, lblCausa, lblDetalle);
+                contenedorTarjetas.getChildren().add(tarjeta);
+            }
+        };
+
+        btnBuscar.setOnAction(e -> ejecutarBusqueda.run());
+        // Carga inicial de las últimas soluciones documentadas al abrir la ventana
+        ejecutarBusqueda.run();
+
+        layout.getChildren().addAll(crearTopBar(stage, "Historial Soluciones"), cbTipo, txtBuscar, btnBuscar, scroll);
         return new Scene(layout, 380, 650);
     }
 }
